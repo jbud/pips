@@ -1,5 +1,6 @@
 import Pips from "./pips";
-import { useState, MouseEvent } from "react";
+import { useState, MouseEvent, useEffect, useRef, useCallback } from "react";
+
 enum System {
     SYS,
     ENG,
@@ -20,6 +21,55 @@ const PipDefaultState: Pip = {
 
 const Sys = () => {
     const [pips, setPips] = useState<Pip>(PipDefaultState);
+    const callbackRef = useRef<number>();
+
+    useEffect(() => {
+        const onKeyPress = (e: any) => {
+            e.preventDefault();
+            const key = e.key;
+            switch (key) {
+                case "ArrowDown":
+                    setPips(PipDefaultState);
+                    break;
+                case "ArrowLeft":
+                    movePips(System.SYS);
+                    break;
+                case "ArrowUp":
+                    movePips(System.ENG);
+                    break;
+                case "ArrowRight":
+                    movePips(System.WEP);
+                    break;
+            }
+        };
+
+        document.addEventListener("keydown", onKeyPress);
+
+        return () => {
+            document.removeEventListener("keydown", onKeyPress);
+        };
+    }, [pips]);
+    let debounce = [0, 0, 0, 0];
+
+    const gamePad = (event: any) => {
+        const gamepad = event.gamepad;
+        console.log(
+            "Gamepad connected at index %d: %s. %d buttons, %d axes.",
+            gamepad.index,
+            gamepad.id,
+            gamepad.buttons.length,
+            gamepad.axes.length
+        );
+
+        callbackRef.current = requestAnimationFrame(update);
+    };
+
+    useEffect(() => {
+        window.addEventListener("gamepadconnected", gamePad);
+        return () => {
+            window.removeEventListener("gamepadconnected", gamePad);
+        };
+    }, [pips]);
 
     const movePips = (sys: System) => {
         const keys = [System.SYS, System.ENG, System.WEP];
@@ -75,6 +125,33 @@ const Sys = () => {
             }
         }
     };
+    const update = useCallback(() => {
+        const gamepad = navigator.getGamepads()[2];
+
+        for (let i = 10; i < 14; i++) {
+            if (gamepad!.buttons[i].pressed && debounce[i - 10] !== 1) {
+                debounce[i - 10] = 1;
+                const buttonId = i - 10;
+                switch (buttonId) {
+                    case 0:
+                        movePips(System.ENG);
+                        break;
+                    case 1:
+                        movePips(System.WEP);
+                        break;
+                    case 2:
+                        setPips(PipDefaultState);
+                        break;
+                    case 3:
+                        movePips(System.SYS);
+                        break;
+                }
+            } else if (!gamepad!.buttons[i].pressed && debounce[i - 10] === 1) {
+                debounce[i - 10] = 0;
+            }
+        }
+        callbackRef.current = requestAnimationFrame(update);
+    }, [pips, debounce, movePips]);
     return (
         <div>
             <div className="boxest">

@@ -12,6 +12,10 @@
   font-size: calc(10px + 2vmin);
   color: white;
 }
+.small-note {
+  font-size: calc(4px + 1vmin);
+  font-style: italic;
+}
 
 .big-Box {
 display: flex;
